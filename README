@@ -2,7 +2,8 @@ Requirements: XMLStarlet that can be invoked with the 'xmlstarlet' command
 This tool is helpful to gather the types of stories that each developer in your Pivotal projects own. 
 It will access all the stories that are accessible with the username and password that are provided.
 Then it will gather all of the types of stories each dev owns, and will put them in the appropiate columns of the CSV file.
-The usage is ./pivotalMetric.sh <userName> <password>
+The usage with username and password is ./pivotalMetric.sh <userName> <password>
+The usage with token is ./pivotalMetric.sh <token>
 There is a limit that Pivotal enforces with their API of 3000 stories per request, so if your project has more than that it will not gather them all.
 The CSV file will be able to be viewed in Excel after the script completes.
 The file name can be changed by changing the METRIC_FILE variable in the script, by default it is metrics.csv
