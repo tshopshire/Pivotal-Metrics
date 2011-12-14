@@ -10,7 +10,9 @@
 
 TOKEN_ARGS=1
 EXPECTED_ARGS=2
+INTERMEDIATE=inter
 METRIC_FILE=metrics.csv
+
 
 if [ $# == $TOKEN_ARGS ]
 then
@@ -24,7 +26,7 @@ else
   exit 0
 fi
 
-touch $METRIC_FILE
+touch $INTERMEDIATE
 
 PROJECTXML=$(curl -s -H "X-TrackerToken: $TOKEN" -X GET https://www.pivotaltracker.com/services/v3/projects )
 #Get the names and id's of al the projects that are accessible to the user.
@@ -32,12 +34,12 @@ PROJECTS=$(echo "$PROJECTXML" | xmlstarlet sel -t -m "(/projects/project)" -n -v
 
 while read -r id name
 do
-	echo ",$name,," >> $METRIC_FILE
+	echo "$name,,," >> $INTERMEDIATE
 	#The first time this loop runs, id and name, are always blank and I can't fix it, 
 	# so this check ensures the column labels aren't present when no project is.
 	if [[ $id != "" ]]
 	then
-	  echo "Developer,Features,Chores,Bugs" >> $METRIC_FILE
+	  echo "Developer,Features,Chores,Bugs" >> $INTERMEDIATE
 	fi
 	
 	STORIES=$(curl -s -H "X-TrackerToken: $TOKEN" -X GET https://www.pivotaltracker.com/services/v3/projects/$id/stories)
@@ -49,7 +51,11 @@ do
 	  FEATURES=$(echo "$STORIES" | xmlstarlet sel -t -m "(/)" -m "(//story)" -i "(owned_by[.='$line'])" -v "count(story_type[.='feature'])" -n | awk '{ s += $1 } END { print s}' ) 
 		BUGS=$(echo "$STORIES" | xmlstarlet sel -t -m "(/)" -m "(//story)" -i "(owned_by[.='$line'])" -v "count(story_type[.='bug'])" -n  | awk '{ s += $1 } END { print s}' ) 
 		CHORES=$(echo "$STORIES" | xmlstarlet sel -t -m "(/)" -m "(//story)" -i "(owned_by[.='$line'])" -v "count(story_type[.='chore'])" -n  | awk '{ s += $1 } END { print s}' ) 
-		echo "$line," "$FEATURES," "$BUGS," "$CHORES" >> $METRIC_FILE
+		echo "$line," "$FEATURES," "$BUGS," "$CHORES" >> $INTERMEDIATE
 	done <<< "$NAMES"	
-	echo "" >> $METRIC_FILE
+	echo "" >> $INTERMEDIATE
 done <<< "$PROJECTS"
+
+cat $INTERMEDIATE | tr -s '\n' | sed '1d;2d' > $METRIC_FILE
+rm $INTERMEDIATE
+
