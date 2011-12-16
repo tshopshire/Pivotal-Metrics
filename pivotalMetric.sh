@@ -34,12 +34,11 @@ PROJECTS=$(echo "$PROJECTXML" | xmlstarlet sel -t -m "(/projects/project)" -n -v
 
 while read -r id name
 do
-	echo "$name,,," >> $INTERMEDIATE
 	#The first time this loop runs, id and name, are always blank and I can't fix it, 
 	# so this check ensures the column labels aren't present when no project is.
 	if [[ $id != "" ]]
 	then
-	  echo "Developer,Features,Chores,Bugs" >> $INTERMEDIATE
+	  echo "Project,Developer,Features,Chores,Bugs" >> $INTERMEDIATE
 	fi
 	
 	STORIES=$(curl -s -H "X-TrackerToken: $TOKEN" -X GET https://www.pivotaltracker.com/services/v3/projects/$id/stories)
@@ -51,11 +50,11 @@ do
 	  FEATURES=$(echo "$STORIES" | xmlstarlet sel -t -m "(/)" -m "(//story)" -i "(owned_by[.='$line'])" -v "count(story_type[.='feature'])" -n | awk '{ s += $1 } END { print s}' ) 
 		BUGS=$(echo "$STORIES" | xmlstarlet sel -t -m "(/)" -m "(//story)" -i "(owned_by[.='$line'])" -v "count(story_type[.='bug'])" -n  | awk '{ s += $1 } END { print s}' ) 
 		CHORES=$(echo "$STORIES" | xmlstarlet sel -t -m "(/)" -m "(//story)" -i "(owned_by[.='$line'])" -v "count(story_type[.='chore'])" -n  | awk '{ s += $1 } END { print s}' ) 
-		echo "$line," "$FEATURES," "$BUGS," "$CHORES" >> $INTERMEDIATE
+		echo "$name," "$line," "$FEATURES," "$BUGS," "$CHORES" >> $INTERMEDIATE
 	done <<< "$NAMES"	
 	echo "" >> $INTERMEDIATE
 done <<< "$PROJECTS"
 
-cat $INTERMEDIATE | tr -s '\n' | sed '1d;2d' > $METRIC_FILE
+cat $INTERMEDIATE | tr -s '\n' | sed '1d' > $METRIC_FILE
 rm $INTERMEDIATE
 
