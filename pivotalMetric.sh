@@ -20,27 +20,22 @@ then
 elif [ $# == $EXPECTED_ARGS ]
 then
   #Get the token used for the header in later requests.
-  TOKEN=$(curl -s -u $1:$2 -X GET https://www.pivotaltracker.com/services/v3/tokens/active | xmlstarlet sel -t -m "(/token)" -v "(guid)")
+  TOKEN=$(curl  -u $1:$2 -X GET https://www.pivotaltracker.com/services/v3/tokens/active | xmlstarlet sel -t -m "(/token)" -v "(guid)")
 else
   echo "Usage is $0 <UserName> <password> or $0 <token>"
   exit 0
 fi
 
 touch $INTERMEDIATE
+#Initial formatting
+echo "Project,Developer,Features,Chores,Bugs" >> $INTERMEDIATE
 
-PROJECTXML=$(curl -s -H "X-TrackerToken: $TOKEN" -X GET https://www.pivotaltracker.com/services/v3/projects )
+PROJECTXML=$(curl -H "X-TrackerToken: $TOKEN" -X GET https://www.pivotaltracker.com/services/v3/projects )
 #Get the names and id's of al the projects that are accessible to the user.
 PROJECTS=$(echo "$PROJECTXML" | xmlstarlet sel -t -m "(/projects/project)" -n -v "(id)" -e name -v "(name)" | awk 'BEGIN {FS = "[<]|[>]"} {print $1 " " $3}')
 
 while read -r id name
 do
-	#The first time this loop runs, id and name, are always blank and I can't fix it, 
-	# so this check ensures the column labels aren't present when no project is.
-	if [[ $id != "" ]]
-	then
-	  echo "Project,Developer,Features,Chores,Bugs" >> $INTERMEDIATE
-	fi
-	
 	STORIES=$(curl -s -H "X-TrackerToken: $TOKEN" -X GET https://www.pivotaltracker.com/services/v3/projects/$id/stories)
 	#Get the owner names and remove all duplicate entries, useful with XMLStarlet to count the number of nodes of each story type.
   NAMES=$(echo "$STORIES" | xmlstarlet sel -t -m "(/)" -m "(//story)" -v "(owned_by)" -n | tr -s '\n' | sort | uniq)
@@ -55,6 +50,5 @@ do
 	echo "" >> $INTERMEDIATE
 done <<< "$PROJECTS"
 
-cat $INTERMEDIATE | tr -s '\n' | sed '1d' > $METRIC_FILE
+cat $INTERMEDIATE | tr -s '\n' | sed '2d' > $METRIC_FILE
 rm $INTERMEDIATE
-
